@@ -1,0 +1,21 @@
+[
+  "goals",
+  "shots_on_target",
+  "xg",
+  "xg_assist",
+  "sca",
+  "gca",
+  "progressive_passes",
+  "progressive_carries",
+  "take_ons_won",
+  "passes_into_final_third",
+  "crosses_into_penalty_area",
+  "corner_kicks",
+  "tackles",
+  "interceptions",
+  "blocks",
+  "touches_mid_3rd",
+  "touches_att_3rd",
+  "touches_att_pen_area",
+  "touches_live_ball"
+]

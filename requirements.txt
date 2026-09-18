@@ -1,0 +1,15 @@
+# Feature pipeline + models
+pandas
+numpy
+scikit-learn>=1.4
+xgboost
+
+# Result plots (analysis/plot_results.py)
+matplotlib
+
+# Scraper (scraper/) - not required to run the pipeline or models above.
+# Included for completeness; see scraper/README.md for why these scripts
+# no longer pull complete data.
+selenium
+beautifulsoup4
+send2trash
