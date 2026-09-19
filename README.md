@@ -1,28 +1,32 @@
 # Football Match Outcome Prediction: BTTS & Over 2.5 Goals
 
-Predicting two match outcomes for English Premier League matches - both
-teams to score (BTTS) and total goals over 2.5 - from each team's
+Predicting two match outcomes across eight European top-flight leagues -
+both teams to score (BTTS) and total goals over 2.5 - from each team's
 5-match rolling form, comparing an elasticnet logistic regression
-against XGBoost. All data from FBref (2018-19 through 2023-24 seasons,
-2,157 matches).
+against XGBoost. All data from FBref: 8,116 matches spanning the Premier
+League, La Liga, Serie A, the Bundesliga, Ligue 1, the Eredivisie, the
+Primeira Liga, and the Belgian Pro League, from the 2017-18 season
+through 2024-25.
 
 ## What this is, honestly
 
-Both models land at an AUC of roughly 0.48-0.58 depending on model and
-target - close to chance (0.50), with no model consistently ahead across
-both markets. That's not a bug or a weak implementation; it's a real,
-defensible empirical result. Pre-match team-form statistics carry very
-little signal for these two markets once you evaluate honestly
-(out-of-sample, season holdout, no leakage), which is broadly consistent
-with football being one of the harder sports to beat a bookmaker's line
-on. The value of this project is the methodology - a leak-free feature
-pipeline and a fair, apples-to-apples backtest between two model families
-- not a claim of a profitable prediction system.
+Across the four model/target combinations, season-holdout AUC ranges
+from 0.53 to 0.60 - modest, but consistently above chance (0.50), across
+a much larger and more varied dataset than a single league would give.
+No model dominates across the board: logistic regression is a little
+ahead on BTTS, XGBoost is a little ahead on Over 2.5. Pre-match
+team-form statistics carry real but weak signal for these two markets
+once you evaluate honestly (out-of-sample, season holdout, no leakage),
+which is broadly consistent with football being one of the harder
+sports to beat a bookmaker's line on. The value of this project is the
+methodology - a leak-free feature pipeline and a fair, apples-to-apples
+backtest between two model families across eight leagues - not a claim
+of a profitable prediction system.
 
 ## Results
 
 The headline number for each model/target is a **season holdout**: the
-most recent season (2023-24) is set aside before anything is fit, and is
+most recent season (2024-25) is set aside before anything is fit, and is
 never touched during training or calibration - only used once, at the
 end, to score the model. Alongside it, a **walk-forward** check
 (multiple rolling train/test windows, restricted to the earlier seasons
@@ -31,21 +35,20 @@ single holdout season is still just one sample.
 
 | Model | Target | Season-holdout AUC | Brier | Walk-forward AUC (mean, min-max) |
 |---|---|---|---|---|
-| Logistic (elasticnet) | BTTS | 0.578 | 0.249 | 0.482 (0.460-0.498) |
-| Logistic (elasticnet) | Over 2.5 | 0.545 | 0.240 | 0.541 (0.526-0.565) |
-| XGBoost | BTTS | 0.552 | 0.247 | 0.492 (0.475-0.526) |
-| XGBoost | Over 2.5 | 0.496 | 0.247 | 0.565 (0.539-0.591) |
+| Logistic (elasticnet) | BTTS | 0.548 | 0.248 | 0.568 (0.561-0.572) |
+| Logistic (elasticnet) | Over 2.5 | 0.588 | 0.244 | 0.600 (0.595-0.608) |
+| XGBoost | BTTS | 0.526 | 0.250 | 0.535 (0.533-0.540) |
+| XGBoost | Over 2.5 | 0.604 | 0.244 | 0.574 (0.558-0.585) |
 
-For context, always predicting the base rate (~50%) gives a Brier score
-of about 0.25 for a balanced target - so on Brier score, every model
-here is roughly as calibrated as a coin flip. The season-holdout AUCs
-sit a bit above 0.50 for three of the four model/target pairs, but the
-walk-forward spread (which swings both above and below 0.50 across
-rolls, and even flips which model looks better) shows that a single
-season's result isn't something to read too much into on its own - it's
-reported as the headline because it's the stricter, standard way to
-backtest a season-by-season model, not because it's the most flattering
-number. Full per-roll numbers are in `results/*.json`.
+For context, always predicting the base rate (~50-52%) gives a Brier
+score of about 0.25 for a target this close to balanced - so on Brier
+score, every model here is close to a coin flip, with logistic on BTTS
+and both models on Over 2.5 edging slightly ahead of that baseline. The
+season-holdout AUCs sit above 0.50 for all four model/target pairs, and
+the walk-forward spread stays fairly tight and consistently above 0.50
+across all three rolls for every combination - a modest but reasonably
+stable edge over chance, not a fluke of one holdout season. Full
+per-roll numbers are in `results/*.json`.
 
 ![Season-holdout AUC by model and target](analysis/results_comparison.png)
 
@@ -54,26 +57,29 @@ number. Full per-roll numbers are in `results/*.json`.
 It's tempting to blame the models, so it's worth checking the features
 themselves before doing that. `analysis/plot_results.py` computes the
 plain Pearson correlation between every one of the 38 rolling "combo"
-features and each target, across all 2,157 matches - no model involved,
-just "does this number move with the outcome at all":
+features and each target, across all 8,116 matches in all eight
+leagues - no model involved, just "does this number move with the
+outcome at all":
 
 ![Correlation between each rolling feature and the outcome](analysis/feature_signal.png)
 
-The single most-correlated feature out of 38 reaches **r = 0.070** for
-BTTS and **r = 0.091** for Over 2.5. Most sit under 0.05. A model built
-on top of these can't be expected to separate classes much better than
-chance, because the inputs themselves barely move with the outcome - no
-amount of tuning, regularization, or a fancier model changes that. This
-matches the wider pattern in football analytics: a 5-match rolling
-average of shots, xG, and possession stats describes a team's recent
-*level*, not what happens in one specific match against one specific
-opponent, and goals in football are low-frequency, high-variance events
-that a lot of match-to-match noise (finishing luck, a red card, a
-deflection) sits on top of. It's also the kind of market bookmakers
-price efficiently precisely because pre-match team-form stats are public
-and easy to compute - if this signal were strong, it likely wouldn't
-still be sitting there unpriced. None of that is a flaw in this
-pipeline; it's the actual finding.
+The single most-correlated feature out of 38 reaches **r = 0.070**
+(`away_xg_assist`) for BTTS and **r = 0.098**
+(`home_touches_att_pen_area`) for Over 2.5. Most sit well under 0.05. A
+model built on top of these can't be expected to separate classes much
+better than chance, because the inputs themselves barely move with the
+outcome - no amount of tuning, regularization, or a fancier model
+changes that. This matches the wider pattern in football analytics: a
+5-match rolling average of shots, xG, and possession stats describes a
+team's recent *level*, not what happens in one specific match against
+one specific opponent, and goals in football are low-frequency,
+high-variance events that a lot of match-to-match noise (finishing
+luck, a red card, a deflection) sits on top of. It's also the kind of
+market bookmakers price efficiently precisely because pre-match
+team-form stats are public and easy to compute - if this signal were
+strong, it likely wouldn't still be sitting there unpriced. None of
+that is a flaw in this pipeline; it's the actual finding, and it holds
+across all eight leagues, not just one.
 
 ## Why these numbers should be trusted
 
@@ -136,11 +142,13 @@ results/        Per-model metrics (JSON) from the runs reported in this
 
 ## Scope, and what's not included
 
-- **Single league actually trained on, six seasons.** The loader
-  (`src/build_dataset_by_matches.py`) discovers and reads any league/season
-  folder present under `data/raw/fbref/`, but only Premier League 2018-19
-  through 2023-24 was actually collected and run - that's a deliberate
-  scope choice (data consistency, time), not a limitation of the code.
+- **All eight leagues that the loader discovers were actually trained
+  on.** The loader (`src/build_dataset_by_matches.py`) discovers and
+  reads any league/season folder present under `data/raw/fbref/`, and
+  for this run that meant the Premier League, La Liga, Serie A, the
+  Bundesliga, Ligue 1, the Eredivisie, the Primeira Liga, and the
+  Belgian Pro League - 8,116 matches from 2017-18 through 2024-25 -
+  rather than a single league.
 - **The ~11 GB of raw scraped FBref match JSON is not included here** -
   the folder structure is preserved with a couple of real sample files
   (see `data/README.md`) plus the already-built `training_table.csv`,
